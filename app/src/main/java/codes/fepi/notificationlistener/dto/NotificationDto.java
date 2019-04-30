@@ -1,4 +1,4 @@
-package codes.fepi.notificationlistener;
+package codes.fepi.notificationlistener.dto;
 
 import java.util.Objects;
 
@@ -8,12 +8,14 @@ public class NotificationDto {
     private String title;
     private String content;
     private String source;
+    private String key;
 
     public NotificationDto() {
     }
 
-    public NotificationDto(int id, long time, String title, String content, String source) {
+    public NotificationDto(int id, String key, long time, String title, String content, String source) {
         this.id = id;
+        this.key = key;
         this.time = time;
         this.title = title;
         this.content = content;
@@ -38,6 +40,10 @@ public class NotificationDto {
 
     public String getSource() {
         return source;
+    }
+
+    public String getKey() {
+        return key;
     }
 
     @Override
