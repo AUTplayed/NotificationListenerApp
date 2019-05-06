@@ -71,7 +71,7 @@ public class ListenerService2 extends NotificationListenerService {
     private void updateNotifications(StatusBarNotification[] activeNotifications) {
         Set<NotificationDto> dtos = new HashSet<>(activeNotifications.length);
         for (StatusBarNotification activeNotification : activeNotifications) {
-            if (!activeNotification.isClearable()) {
+            if (!activeNotification.isClearable() || activeNotification.getId() == 0) {
                 continue;
             }
             dtos.add(getDtoFromNotif(activeNotification));
