@@ -4,12 +4,15 @@ import android.app.Notification;
 import android.content.SharedPreferences;
 import android.service.notification.NotificationListenerService;
 import android.service.notification.StatusBarNotification;
+import android.support.annotation.VisibleForTesting;
 import android.util.Log;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
+import java.util.ArrayList;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
@@ -55,11 +58,11 @@ public class ListenerService2 extends NotificationListenerService {
         StatusBarNotification[] activeNotifications = getActiveNotifications();
         boolean viableNotif = false;
         for (StatusBarNotification activeNotification : activeNotifications) {
-            if(activeNotification.isClearable()) {
+            if (activeNotification.isClearable()) {
                 viableNotif = true;
             }
         }
-        if(viableNotif) { // only send periodic updates if there are notifications (because no notifs => no actions)
+        if (viableNotif) { // only send periodic updates if there are notifications (because no notifs => no actions)
             updateNotifications(activeNotifications);
         }
     }
@@ -71,15 +74,40 @@ public class ListenerService2 extends NotificationListenerService {
     private void updateNotifications(StatusBarNotification[] activeNotifications) {
         Set<NotificationDto> dtos = new HashSet<>(activeNotifications.length);
         for (StatusBarNotification activeNotification : activeNotifications) {
-            if (!activeNotification.isClearable() || activeNotification.getId() == 0) {
+            if (!activeNotification.isClearable()) {
                 continue;
             }
             dtos.add(getDtoFromNotif(activeNotification));
         }
-        sendToServer(dtos);
+        sendToServer(filterNotifications(dtos));
     }
 
-    private void sendToServer(Set<NotificationDto> notifications) {
+    @VisibleForTesting
+    public List<NotificationDto> filterNotifications(Set<NotificationDto> notifications) {
+        List<NotificationDto> notifs = new ArrayList<>(notifications);
+        for (int i = 0; i < notifs.size(); i++) {
+            NotificationDto outer = notifs.get(i);
+            for (int j = i + 1; j < notifs.size(); j++) {
+                NotificationDto inner = notifs.get(j);
+                if (outer.getSource().equals(inner.getSource())) {
+                    if(isDuplicate(inner, outer)) {
+                        notifs.remove(j);
+                        j--;
+                    } else if(outer.getContent().isEmpty()) {
+                        notifs.remove(i);
+                        i--;
+                    }
+                }
+            }
+        }
+        return notifs;
+    }
+
+    private boolean isDuplicate(NotificationDto notif, NotificationDto other) {
+        return notif.getContent().isEmpty() || notif.getContent().equals(other.getContent()) || notif.getTitle().equals(other.getTitle());
+    }
+
+    private void sendToServer(List<NotificationDto> notifications) {
         String json = "";
         try {
             json = mapper.writeValueAsString(notifications);
